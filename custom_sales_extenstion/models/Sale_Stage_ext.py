@@ -32,10 +32,6 @@ class SaleExt(models.Model):
 
         return False
 
-
-
-
-    # #new in odoo 17
     def _can_be_confirmed(self):
         self.ensure_one()
         return self.state in {'draft', 'sent'} or int
@@ -116,9 +112,7 @@ class SaleExt(models.Model):
         return select
 
     def action_confirm(self):
-
         if self.saletype:
-            print("dddddddddddddd")
             if self.state in ('draft', 'sent'):
                 price_id = self.pricelist_id.id
                 product_pricelist = self.env['product.pricelist'].search([('id', '=', price_id)], limit=1)
@@ -131,7 +125,7 @@ class SaleExt(models.Model):
                             ], limit=1)
                             print("amount ",(line.price_unit * line.discount) / 100)
 
-                            if itemexist and itemexist.min_price > line.price_unit and (line.price_unit * line.discount) / 100 < itemexist.min_price :
+                            if itemexist and itemexist.min_price > line.price_unit or (line.price_unit * line.discount) / 100 < itemexist.min_price :
                                 newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
                                 self.state = newlist[0].code
                                 self.process_stages()
@@ -139,7 +133,6 @@ class SaleExt(models.Model):
                                 super(SaleExt, self).action_confirm()
 
         else:
-            print("hhhhhhhhhhhhhhhhh")
             super(SaleExt, self).action_confirm()
 
     def _show_pending_status(self):
