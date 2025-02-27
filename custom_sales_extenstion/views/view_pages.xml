@@ -32,7 +32,7 @@
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
                 <field name="payment_term_id" position="after">
-                    <field name="saletype" widget="selection" readonly="userisadmin == False" invisible="1"/>
+                    <field name="saletype" widget="selection" readonly="userisadmin == False" invisible="1" />
                     <field name="showpending" invisible="1" />
                     <field name="userisadmin" invisible="1" />
                 </field>
