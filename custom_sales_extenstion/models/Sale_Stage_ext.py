@@ -1,9 +1,10 @@
-from odoo import api, fields, models, tools ,_
+from odoo import api, fields, models, tools, _
 from datetime import date, datetime, timedelta
 from odoo.exceptions import ValidationError
 
+
 class SaleExt(models.Model):
-    _inherit = 'sale.order'
+    _inherit = ['sale.order']
 
     saletype = fields.Many2one('sale.stage.type', string='Order type', compute='_calc_stage',
                                inverse='_get_type', tracking=3,
@@ -15,18 +16,16 @@ class SaleExt(models.Model):
                                  store=False)
     userisadmin = fields.Boolean(compute='_check_admin', default=True)
 
-
-
     def _confirmation_error_message(self):
         """ Return whether order can be confirmed or not if not then returm error message. """
         self.ensure_one()
         # if self.state not in {'draft', 'sent'}:
         #     return _("Some orders are not in a state requiring confirmation.")
         if any(
-            not line.display_type
-            and not line.is_downpayment
-            and not line.product_id
-            for line in self.order_line
+                not line.display_type
+                and not line.is_downpayment
+                and not line.product_id
+                for line in self.order_line
         ):
             return _("A line on these orders missing a product, you cannot confirm it.")
 
@@ -46,7 +45,7 @@ class SaleExt(models.Model):
             price_id = rec.pricelist_id.id
 
         ret_type = self.env['sale.stage.type'].search([('pricelist', '=', price_id),
-                                                            ], limit=1)
+                                                       ], limit=1)
         print("rrrreeet typeee----", ret_type)
 
         self.saletype = ret_type
@@ -76,8 +75,8 @@ class SaleExt(models.Model):
 
     def _change_type(self):
         self.env['sale.order.pending'].search([('user', '=', self.env.uid)
-                                                         , ('saleorder', '=', self.id)]
-                                                     ).unlink()
+                                                  , ('saleorder', '=', self.id)]
+                                              ).unlink()
         for act in self.activity_ids:
             if act.activity_type_id.id == 4 and act.res_id == self.id:
                 act.action_feedback('Request is changed')
@@ -110,31 +109,6 @@ class SaleExt(models.Model):
             ('cancel', 'Cancelled'),
         ]
         return select
-
-    def action_confirm(self):
-        if self.saletype:
-            if self.state in ('draft', 'sent'):
-                price_id = self.pricelist_id.id
-                product_pricelist = self.env['product.pricelist'].search([('id', '=', price_id)], limit=1)
-                if product_pricelist:
-                    for line in self.order_line:
-                        if line:
-                            itemexist = self.env['product.pricelist.item'].search([
-                                ('product_tmpl_id', '=', line.product_template_id.id),
-                                ('pricelist_id', '=', product_pricelist.id)
-                            ], limit=1)
-                            print("amount ",(line.price_unit * line.discount) / 100)
-
-                            if itemexist and itemexist.min_price > line.price_unit or (line.price_unit * line.discount) / 100 < itemexist.min_price :
-                                newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
-                                self.state = newlist[0].code
-                                self.process_stages()
-                            else:
-                                super(SaleExt, self).action_confirm()
-
-        else:
-            super(SaleExt, self).action_confirm()
-
     def _show_pending_status(self):
 
         ret = False
@@ -142,9 +116,9 @@ class SaleExt(models.Model):
 
             if self.state in self.saletype.get_stage_list():
                 if self.env['sale.order.pending'].search_count([('user', '=', self.env.uid)
-                                                                          , ('state', '=', self.state)
-                                                                          , ('saleorder', '=', self.id)
-                                                                          , ('status', '=', 'waiting')]):
+                                                                   , ('state', '=', self.state)
+                                                                   , ('saleorder', '=', self.id)
+                                                                   , ('status', '=', 'waiting')]):
                     ret = True
 
         self.showpending = ret
@@ -157,12 +131,11 @@ class SaleExt(models.Model):
             , ('saleorder', '=', self.id)
             , ('status', '=', 'waiting')
         ], limit=1)
-        print("ssststststst" ,rec)
         if rec:
             oldstate = self.state
             rec[0].update({'status': 'approve'})
             for act in self.activity_ids:
-                print("activity", act.user_id ,self.env.uid)
+                print("activity", act.user_id, self.env.uid)
                 if act.activity_type_id.id == 4 and act.res_id == self.id and act.user_id.id == self.env.uid:
                     act.action_feedback(feedback='Request is approved')
             self.check_stage()
@@ -170,10 +143,10 @@ class SaleExt(models.Model):
             if current_stage.approvetype == 'sequence' and oldstate == self.state:
                 print("approve current stat")
                 rec_next = self.env['sale.order.pending'].search([('state', '=', self.state)
-                                                                            , ('saleorder', '=', self.id)
-                                                                            , ('status', '=', 'queue')]
-                                                                        , order='userorder'
-                                                                        , limit=1)
+                                                                     , ('saleorder', '=', self.id)
+                                                                     , ('status', '=', 'queue')]
+                                                                 , order='userorder'
+                                                                 , limit=1)
                 print("next , ", rec_next)
                 rec_next[0].update({'status': 'waiting'})
                 rec_id = self.env['ir.model'].sudo().search([('model', '=', 'sale.order')], limit=1)
@@ -201,20 +174,17 @@ class SaleExt(models.Model):
 
     def check_stage(self):
 
-        # lst_users=list(filter(lambda s:s.code==self.state,self.saletype.stages))
         count_approve = self.env['sale.order.pending'].search_count([('state', '=', self.state)
-                                                                               , ('saleorder', '=', self.id)
-                                                                               , ('status', '=', 'approve')])
+                                                                        , ('saleorder', '=', self.id)
+                                                                        , ('status', '=', 'approve')])
         current_stage = self.env['sale.stage'].sudo().search([('code', '=', self.state)], limit=1)
         print("stages ", count_approve, current_stage)
         newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
 
         if len(current_stage.stageusers) == count_approve:
             if current_stage.code == newlist[len(newlist) - 1].code:
-                print("i am in check stage confirmation")
                 super(SaleExt, self).action_confirm()
             else:
-                print("i am in else check stage confirmation")
 
                 for x in range(0, len(newlist) - 1):
                     if newlist[x].code == current_stage.code:
@@ -235,7 +205,6 @@ class SaleExt(models.Model):
         for usrs in stage_users:  # current_stage.stageusers:
 
             if current_stage.approvetype == 'sequence':
-                print("curreeent ",stage_users)
                 uorder = uorder + 1
                 if uorder == 1:
                     print("firsssts")
@@ -255,7 +224,6 @@ class SaleExt(models.Model):
                         'res_id': self.id
                     })
                 else:
-                    print("i am heererer")
                     self.env['sale.order.pending'].create({
                         'user': usrs[1],
                         'saleorder': self.id,
@@ -263,14 +231,35 @@ class SaleExt(models.Model):
                         'status': 'queue',
                         'userorder': uorder
                     })
+    def _check_pricing_conditions(self):
+        if self.saletype:
+            if self.state in ('draft', 'sent'):
+                price_id = self.pricelist_id.id
+                product_pricelist = self.env['product.pricelist'].search([('id', '=', price_id)], limit=1)
+                if product_pricelist:
+                    for line in self.order_line:
+                        if line:
+                            itemexist = self.env['product.pricelist.item'].search([
+                                ('product_tmpl_id', '=', line.product_template_id.id),
+                                ('pricelist_id', '=', product_pricelist.id)
+                            ], limit=1)
+
+                            if itemexist and itemexist.min_price > line.price_unit or ((line.price_unit * line.discount) / 100 < itemexist.min_price if line.discount else False):
+                                newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
+                                self.state = newlist[0].code
+                                self.process_stages()
+
+
 
 
     @api.model
-    def create(self, vals_list):
-        res = super(SaleExt, self).create(vals_list)
-        return res
+    def create(self, vals):
+        sale_order = super(SaleExt, self).create(vals)
+        sale_order._check_pricing_conditions()
+        return sale_order
 
     def write(self, vals):
         res = super(SaleExt, self).write(vals)
+        if 'order_line' in vals:
+            self._check_pricing_conditions()
         return res
-
