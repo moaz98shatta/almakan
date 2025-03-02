@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+sale_stage_type,sale.stage.type,model_sale_stage_type,base.group_user,1,1,1,1
+sale_stage,sale.stage,model_sale_stage,base.group_user,1,1,1,1
+sale_order_pending,sale.order.pending,model_sale_order_pending,base.group_user,1,1,1,1
+

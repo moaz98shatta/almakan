@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data>
+
+    <menuitem id="menu_sale_stage_type" name="Sales types" parent="sale.menu_sale_config" sequence="5" action="sale_stage_type_action"/>
+</data>
+</odoo>
