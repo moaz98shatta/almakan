@@ -123,6 +123,28 @@ class SaleExt(models.Model):
 
         self.showpending = ret
 
+    def action_confirm(self):
+        if self.saletype:
+            if self.state in ('draft', 'sent'):
+                price_id = self.pricelist_id.id
+                product_pricelist = self.env['product.pricelist'].search([('id', '=', price_id)], limit=1)
+                if product_pricelist:
+                    for line in self.order_line:
+                        if line:
+                            itemexist = self.env['product.pricelist.item'].search([
+                                ('product_tmpl_id', '=', line.product_template_id.id),
+                                ('pricelist_id', '=', product_pricelist.id)
+                            ], limit=1)
+
+                            if itemexist and itemexist.min_price > line.price_unit or (line.price_unit * line.discount) / 100 < itemexist.min_price :
+                                newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
+                                self.state = newlist[0].code
+                                self.process_stages()
+                            else:
+                                super(SaleExt, self).action_confirm()
+        else:
+            super(SaleExt, self).action_confirm()
+
     def action_approve(self):
 
         rec = self.env['sale.order.pending'].search([

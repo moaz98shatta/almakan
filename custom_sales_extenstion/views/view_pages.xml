@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-   <data>
+    <data>
         <record id="view_sale_stage_type" model="ir.ui.view">
             <field name="name">Sale stage type</field>
             <field name="model">sale.stage.type</field>
 
             <field name="arch" type="xml">
-                <form >
+                <form>
                     <group>
-                        <field name="name" invisible="0" />
-                        <field name="pricelist" invisible="0" />
+                        <field name="name" invisible="0"/>
+                        <field name="pricelist" invisible="0"/>
                     </group>
                     <field name="stages" widget="one2many" context="{'show_attribute': False}">
-                        <list string="stages" editable="bottom" >
+                        <list string="stages" editable="bottom">
                             <field name="code" invisible="0"/>
                             <field name="name" invisible="0"/>
-                            <field name="approvetype" invisible="0" widget="selectiom" />
-                            <field name="stageusers" widget="many2many_tags" options="{'no_create_edit': True, 'color_field': 'color'}" />
-                            <field name="stageorder" />
+                            <field name="approvetype" invisible="0" widget="selectiom"/>
+                            <field name="stageusers" widget="many2many_tags"
+                                   options="{'no_create_edit': True, 'color_field': 'color'}"/>
+                            <field name="stageorder"/>
                         </list>
                     </field>
                 </form>
@@ -26,23 +27,26 @@
         </record>
 
 
-       <record id="view_sale_form_inherit" model="ir.ui.view">
-        <field name="name">sale.order.inherit</field>
-        <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
-        <field name="arch" type="xml">
+        <record id="view_sale_form_inherit" model="ir.ui.view">
+            <field name="name">sale.order.inherit</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
                 <field name="payment_term_id" position="after">
-                    <field name="saletype" widget="selection" readonly="userisadmin == False" invisible="1" />
-                    <field name="showpending" invisible="1" />
-                    <field name="userisadmin" invisible="1" />
+                    <field name="saletype" widget="selection" readonly="userisadmin == False" invisible="1"/>
+                    <field name="showpending" invisible="1"/>
+                    <field name="userisadmin" invisible="1"/>
                 </field>
                 <field name="state" position="before">
-                   <button name="action_approve" string="Approve" type="object" invisible="showpending == False" />
-                   <button name="action_decline"  string="Decline" type="object" invisible="showpending == False"/>
+                    <button name="action_approve" string="Approve" type="object" invisible="showpending == False"/>
+                    <button name="action_decline" string="Decline" type="object" invisible="showpending == False"/>
                 </field>
-        </field>
-    </record>
+                <button name="action_preview_sale_order" position="attributes">
+                    <attribute name="invisible">state not in ['sale','draft']</attribute>
+                </button>
+            </field>
+        </record>
 
-   </data>
+    </data>
 
 </odoo>
