@@ -1,36 +1,13 @@
 <odoo>
 
-        <record model="sale_stage" id="1">
-            <field name="code">draft</field>
-            <field name="name">Quotation</field>
-            <field name="stageorder">-20</field>
-            <field name="issystem">True</field>
+    <!-- Sequence for Sale Stage Codes -->
+    <record id="seq_sale_stage_code" model="ir.sequence">
+        <field name="name">Sale Stage Code</field>
+        <field name="code">sale.stage.code</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
 
-        </record>
-        <record model="sale_stage" id="2">
-            <field name="code">sent</field>
-            <field name="name">Quotation Sent</field>
-            <field name="stageorder">-30</field>
-            <field name="issystem">True</field>
 
-        </record>
-        <record model="sale_stage" id="3">
-            <field name="code">sale</field>
-            <field name="name">Sales Order</field>
-            <field name="stageorder">1000</field>
-            <field name="issystem">True</field>
-       </record>
-        <record model="sale_stage" id="4">
-            <field name="code">done</field>
-            <field name="name">Locked</field>
-            <field name="stageorder">1020</field>
-            <field name="issystem">True</field>
-       </record>
-        <record model="sale_stage" id="5">
-            <field name="code">cancel</field>
-            <field name="name">Cancelled</field>
-            <field name="stageorder">1030</field>
-            <field name="issystem">True</field>
-       </record>
 
 </odoo>

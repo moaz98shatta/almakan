@@ -2,9 +2,12 @@ from odoo import api, fields, models, tools, _
 from datetime import date, datetime, timedelta
 from odoo.exceptions import ValidationError
 
+from passlib.ext.django.utils import ProxyProperty
+from pyasn1.debug import Printer
+
 
 class SaleExt(models.Model):
-    _inherit = ['sale.order']
+    _inherit = 'sale.order'
 
     saletype = fields.Many2one('sale.stage.type', string='Order type', compute='_calc_stage',
                                inverse='_get_type', tracking=3,
@@ -15,6 +18,10 @@ class SaleExt(models.Model):
     showpending = fields.Boolean(string='pending status', compute='_show_pending_status', depends=['state'],
                                  store=False)
     userisadmin = fields.Boolean(compute='_check_admin', default=True)
+
+    done_state = fields.Boolean( default=False)
+    confirm_on_create = fields.Boolean(default=False)
+
 
     def _confirmation_error_message(self):
         """ Return whether order can be confirmed or not if not then returm error message. """
@@ -94,6 +101,7 @@ class SaleExt(models.Model):
         self.process_stages()
 
     def get_stages(self):
+
         lst = []
         recset = self.env['sale.stage'].search([], order='stageorder')
         for stg in recset:
@@ -109,23 +117,10 @@ class SaleExt(models.Model):
             ('cancel', 'Cancelled'),
         ]
         return select
-    def _show_pending_status(self):
-
-        ret = False
-        if self.saletype:
-
-            if self.state in self.saletype.get_stage_list():
-                if self.env['sale.order.pending'].search_count([('user', '=', self.env.uid)
-                                                                   , ('state', '=', self.state)
-                                                                   , ('saleorder', '=', self.id)
-                                                                   , ('status', '=', 'waiting')]):
-                    ret = True
-
-        self.showpending = ret
 
     def action_confirm(self):
         if self.saletype:
-            if self.state in ('draft', 'sent'):
+            if self.state in ('draft', 'sent') and self.done_state == False:
                 price_id = self.pricelist_id.id
                 product_pricelist = self.env['product.pricelist'].search([('id', '=', price_id)], limit=1)
                 if product_pricelist:
@@ -142,11 +137,35 @@ class SaleExt(models.Model):
                                 self.process_stages()
                             else:
                                 super(SaleExt, self).action_confirm()
+            elif (self.confirm_on_create and self.done_state):
+                super(SaleExt, self).action_confirm()
+            elif self.confirm_on_create:
+                True
+
+
+            else:
+                super(SaleExt, self).action_confirm()
+
+
+
         else:
             super(SaleExt, self).action_confirm()
 
-    def action_approve(self):
+    def _show_pending_status(self):
 
+        ret = False
+        if self.saletype:
+
+            if self.state in self.saletype.get_stage_list():
+                if self.env['sale.order.pending'].search_count([('user', '=', self.env.uid)
+                                                                   , ('state', '=', self.state)
+                                                                   , ('saleorder', '=', self.id)
+                                                                   , ('status', '=', 'waiting')]):
+                    ret = True
+
+        self.showpending = ret
+
+    def action_approve(self):
         rec = self.env['sale.order.pending'].search([
             ('user', '=', self.env.uid)
             , ('state', '=', self.state)
@@ -157,29 +176,13 @@ class SaleExt(models.Model):
             oldstate = self.state
             rec[0].update({'status': 'approve'})
             for act in self.activity_ids:
-                print("activity", act.user_id, self.env.uid)
                 if act.activity_type_id.id == 4 and act.res_id == self.id and act.user_id.id == self.env.uid:
                     act.action_feedback(feedback='Request is approved')
             self.check_stage()
             current_stage = self.env['sale.stage'].sudo().search([('code', '=', self.state)], limit=1)
-            if current_stage.approvetype == 'sequence' and oldstate == self.state:
-                print("approve current stat")
-                rec_next = self.env['sale.order.pending'].search([('state', '=', self.state)
-                                                                     , ('saleorder', '=', self.id)
-                                                                     , ('status', '=', 'queue')]
-                                                                 , order='userorder'
-                                                                 , limit=1)
-                print("next , ", rec_next)
-                rec_next[0].update({'status': 'waiting'})
-                rec_id = self.env['ir.model'].sudo().search([('model', '=', 'sale.order')], limit=1)
-                self.env['mail.activity'].sudo().create({
-                    'activity_type_id': 4,
-                    'date_deadline': date.today(),
-                    'summary': 'Request to approve',
-                    'user_id': rec_next.user.id,
-                    'res_model_id': rec_id.id,
-                    'res_id': self.id
-                })
+            self.done_state = True
+
+
 
     def action_decline(self):
 
@@ -196,18 +199,20 @@ class SaleExt(models.Model):
 
     def check_stage(self):
 
+        # lst_users=list(filter(lambda s:s.code==self.state,self.saletype.stages))
         count_approve = self.env['sale.order.pending'].search_count([('state', '=', self.state)
                                                                         , ('saleorder', '=', self.id)
                                                                         , ('status', '=', 'approve')])
         current_stage = self.env['sale.stage'].sudo().search([('code', '=', self.state)], limit=1)
-        print("stages ", count_approve, current_stage)
         newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
 
-        if len(current_stage.stageusers) == count_approve:
+        if len(current_stage.stageusers) >= count_approve:
             if current_stage.code == newlist[len(newlist) - 1].code:
-                super(SaleExt, self).action_confirm()
+                super(SaleExt, self).action_cancel()
+                super(SaleExt, self).action_draft()
+                self.state= 'draft'
+                # super(SaleExt, self).action_confirm()
             else:
-
                 for x in range(0, len(newlist) - 1):
                     if newlist[x].code == current_stage.code:
                         self.state = newlist[x + 1].code
@@ -218,44 +223,31 @@ class SaleExt(models.Model):
         current_stage = self.env['sale.stage'].sudo().search([('code', '=', self.state)], limit=1)
         uorder = 0
         rec_id = self.env['ir.model'].sudo().search([('model', '=', 'sale.order')], limit=1)
-        # print(rec_id)
         qquery = " select seq,res_users_id  from res_users_sale_stage_rel  where sale_stage_id=" + str(
             current_stage.id) + " order by seq"
         self.env.cr.execute(qquery)
         stage_users = self.env.cr.fetchall()
-        #  print(stage_users)
-        for usrs in stage_users:  # current_stage.stageusers:
-
+        for user in stage_users:
             if current_stage.approvetype == 'sequence':
-                uorder = uorder + 1
-                if uorder == 1:
-                    print("firsssts")
-                    self.env['sale.order.pending'].create({
-                        'user': usrs[1],
-                        'saleorder': self.id,
-                        'state': self.state,
-                        'status': 'waiting',
-                        'userorder': uorder
-                    })
-                    self.env['mail.activity'].sudo().create({
-                        'activity_type_id': 4,
-                        'date_deadline': date.today(),
-                        'summary': 'Request to approve',
-                        'user_id': usrs[1],
-                        'res_model_id': rec_id.id,
-                        'res_id': self.id
-                    })
-                else:
-                    self.env['sale.order.pending'].create({
-                        'user': usrs[1],
-                        'saleorder': self.id,
-                        'state': self.state,
-                        'status': 'queue',
-                        'userorder': uorder
-                    })
+                self.env['sale.order.pending'].create({
+                    'user': user[1],
+                    'saleorder': self.id,
+                    'state': self.state,
+                    'status': 'waiting',
+                    'userorder': uorder
+                })
+                self.env['mail.activity'].sudo().create({
+                    'activity_type_id': 4,
+                    'date_deadline': date.today(),
+                    'summary': 'Request to approve',
+                    'user_id': user[1],
+                    'res_model_id': rec_id.id,
+                    'res_id': self.id
+                })
+
     def _check_pricing_conditions(self):
         if self.saletype:
-            if self.state in ('draft', 'sent'):
+            if self.state in ('draft', 'sent') and self.done_state == False:
                 price_id = self.pricelist_id.id
                 product_pricelist = self.env['product.pricelist'].search([('id', '=', price_id)], limit=1)
                 if product_pricelist:
@@ -270,6 +262,9 @@ class SaleExt(models.Model):
                                 newlist = sorted(self.saletype.stages, key=lambda x: x.stageorder)
                                 self.state = newlist[0].code
                                 self.process_stages()
+                                self.confirm_on_create = True
+            else:
+                self.action_confirm()
 
 
 
