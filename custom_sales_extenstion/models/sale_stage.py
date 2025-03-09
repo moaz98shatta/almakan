@@ -8,6 +8,7 @@ class SaleStage(models.Model):
 
 
     code = fields.Char(string='Stage Code', required=True, copy=False, default=lambda self: self._generate_sequence_code())
+    new_code = fields.Char(string='Stage new code')
     name = fields.Char(string='Stage name', required=True)
     stageusers = fields.Many2many('res.users', string='Related users')
     sale_template = fields.Many2one('sale.stage.type', string='Sale template', required=False)

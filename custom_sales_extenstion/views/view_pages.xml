@@ -13,11 +13,12 @@
                     </group>
                     <field name="stages" widget="one2many" context="{'show_attribute': False}">
                         <list string="stages" editable="bottom" >
-                            <field name="code" invisible="1"/>
+                            <field name="code" invisible="0"/>
+                            <field name="new_code" invisible="1"/>
                             <field name="name" invisible="0"/>
                             <field name="approvetype" invisible="0" widget="selectiom" />
                             <field name="stageusers" widget="many2many_tags" options="{'no_create_edit': True, 'color_field': 'color'}" />
-                            <field name="stageorder" invisible="1" />
+                            <field name="stageorder" invisible="1"/>
                         </list>
                     </field>
                 </form>
