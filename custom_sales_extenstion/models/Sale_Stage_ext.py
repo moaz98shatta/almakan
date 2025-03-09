@@ -279,12 +279,12 @@ class SaleExt(models.Model):
         sale_order._check_pricing_conditions()
         return sale_order
 
-    def write(self, vals):
-        res = super(SaleExt, self).write(vals)
-        if 'order_line' in vals:
-            self._check_pricing_conditions()
-        return res
-
+    # def write(self, vals):
+    #     res = super(SaleExt, self).write(vals)
+    #     if 'order_line' in vals:
+    #         self._check_pricing_conditions()
+    #     return res
+    #
 
 
 class SaleOrderLine(models.Model):
