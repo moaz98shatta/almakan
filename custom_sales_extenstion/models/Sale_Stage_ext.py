@@ -21,6 +21,8 @@ class SaleExt(models.Model):
 
     done_state = fields.Boolean( default=False)
     confirm_on_create = fields.Boolean(default=False)
+    is_hide = fields.Boolean(default=False)
+
 
 
     def _confirmation_error_message(self):
@@ -136,19 +138,21 @@ class SaleExt(models.Model):
                                 self.state = newlist[0].code
                                 self.process_stages()
                             else:
+                                self.is_hide = True
                                 super(SaleExt, self).action_confirm()
             elif (self.confirm_on_create and self.done_state):
+                self.is_hide = True
                 super(SaleExt, self).action_confirm()
             elif self.confirm_on_create:
                 True
-
-
             else:
+                self.is_hide = True
                 super(SaleExt, self).action_confirm()
 
 
 
         else:
+            self.is_hide = True
             super(SaleExt, self).action_confirm()
 
     def _show_pending_status(self):
@@ -280,3 +284,15 @@ class SaleExt(models.Model):
         if 'order_line' in vals:
             self._check_pricing_conditions()
         return res
+
+
+
+class SaleOrderLine(models.Model):
+    _inherit = 'sale.order.line'
+
+    is_hide = fields.Boolean(string="Hide Price",related='order_id.is_hide', default=False)
+
+
+
+
+
