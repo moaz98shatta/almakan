@@ -271,9 +271,6 @@ class SaleExt(models.Model):
                                 self.state = newlist[0].code
                                 self.process_stages()
 
-
-
-
     @api.model
     def create(self, vals):
         sale_order = super(SaleExt, self).create(vals)
