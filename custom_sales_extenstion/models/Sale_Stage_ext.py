@@ -272,7 +272,6 @@ class SaleExt(models.Model):
 
 
 
-
     @api.model
     def create(self, vals):
         sale_order = super(SaleExt, self).create(vals)
