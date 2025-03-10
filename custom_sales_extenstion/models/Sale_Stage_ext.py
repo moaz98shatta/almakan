@@ -271,11 +271,11 @@ class SaleExt(models.Model):
                                 self.state = newlist[0].code
                                 self.process_stages()
 
-    @api.model
-    def create(self, vals):
-        sale_order = super(SaleExt, self).create(vals)
-        sale_order._check_pricing_conditions()
-        return sale_order
+    # @api.model
+    # def create(self, vals):
+    #     sale_order = super(SaleExt, self).create(vals)
+    #     sale_order._check_pricing_conditions()
+    #     return sale_order
 
     def write(self, vals):
         res = super(SaleExt, self).write(vals)
